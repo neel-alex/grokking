@@ -47,10 +47,3 @@ def make_dataset(base, train_frac=0.8, batch_size=32):
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
     return train_loader, test_loader
-
-
-if __name__ == "__main__":
-    base = 97
-    data = make_data(base)
-    print(data)
-    print(len(data))

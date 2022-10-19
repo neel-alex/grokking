@@ -1,3 +1,4 @@
+from math import ceil
 from typing import Union, Optional, Tuple
 
 from sacred import Experiment, observers
@@ -38,6 +39,7 @@ def config():
     # Misc
     device: Union[str, th.device] = 'cuda' if th.cuda.is_available() else 'cpu'
     seed: Optional[int] = 4  # chosen by fair dice roll, guaranteed random
+    verbose: bool = True
 
 
 def process_sequence(sequence, model, device):
@@ -110,11 +112,14 @@ def main(base: int,
          weight_decay: float,
          device: Union[str, th.device],
          seed: Optional[int] = None,
+         verbose: bool = False,
          ):
-
     if seed is not None:
         th.manual_seed(seed)
+
     train_loader, test_loader = make_dataset(base, train_frac=train_frac, batch_size=batch_size)
+    gradient_updates_per_epoch = ceil(len(train_loader.dataset) / batch_size)
+
     num_classes = base + 2
     model = TransformerDecoder(embed_dim=embedding_dim,
                                nhead=nhead,
@@ -136,6 +141,11 @@ def main(base: int,
     for epoch in range(epochs):
         train_loss = train_epoch(model, train_loader, loss_function, optimizer, scheduler, device)
         train_acc, test_loss, test_acc = evaluate(model, train_loader, test_loader, loss_function, device)
-        print(f" === EPOCH {epoch} === ")
-        print(f"Train loss: {train_loss:.4f}; Train accuracy: {train_acc:.4f}")
-        print(f"Test loss:  {test_loss:.4f}; Test accuracy:  {test_acc:.4f}")
+        grok_experiment.log_scalar(name='train_loss', value=train_loss, step=(epoch+1)*gradient_updates_per_epoch)
+        grok_experiment.log_scalar(name='train_acc',  value=train_acc,  step=(epoch+1)*gradient_updates_per_epoch)
+        grok_experiment.log_scalar(name='test_loss',  value=test_loss,  step=(epoch+1)*gradient_updates_per_epoch)
+        grok_experiment.log_scalar(name='test_acc',   value=test_acc,   step=(epoch+1)*gradient_updates_per_epoch)
+        if verbose:
+            print(f" === EPOCH {epoch} === ")
+            print(f"Train loss: {train_loss:.4f}; Train accuracy: {train_acc:.4f}")
+            print(f"Test loss:  {test_loss:.4f}; Test accuracy:  {test_acc:.4f}")

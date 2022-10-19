@@ -1,2 +1,3 @@
 torch>=1.12.1
 sacred
+matplotlib
